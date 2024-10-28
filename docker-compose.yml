@@ -1,0 +1,93 @@
+#version: '3.8'
+
+services:
+  nginx:
+    build: 
+      context: .
+      dockerfile: nginx.dockerfile
+    ports:
+      - 80:80
+    networks:
+      - salinet
+    volumes:
+      - ./src/:/var/www/html
+    depends_on:
+      - mysql
+      - php
+
+  mysql:
+    image: mysql:5.7
+    ports:
+      - 3306:3306
+    networks:
+      - salinet
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - ./mysql:/var/lib/mysql
+  php:
+    build: 
+      context: .
+      dockerfile: php.dockerfile
+    volumes:
+      - ./src:/var/www/html
+    networks:
+      - salinet
+
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: secret
+    ports:
+      - "6975:80"
+    networks:
+      - salinet
+    depends_on:
+      - mysql
+
+  composer:
+    build:
+      context: .
+      dockerfile: composer.dockerfile
+    volumes:
+      - ./src:/var/www/html
+    working_dir: /var/www/html
+    networks:
+      - salinet
+
+  npm:
+    image: node:current-alpine
+    volumes:
+      - ./src:/var/www/html   
+    entrypoint: ["npm"] 
+    working_dir: /var/www/html
+    tty: true
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "5173:5173"
+    networks:
+      - salinet
+    
+  artisan: 
+    build:
+      context: .
+      dockerfile: php.dockerfile
+    volumes:
+      - ./src:/var/www/html    
+    working_dir: /var/www/html
+    depends_on:
+      - mysql
+    entrypoint: ["php", "/var/www/html/artisan"]
+    networks:
+      - salinet
+
+networks:
+  salinet:
